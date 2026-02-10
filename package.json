@@ -1,15 +1,41 @@
 {
   "name": "imavote",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
+    "test:coverage": "hardhat coverage",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia"
+  },
+  "dependencies": {
+    "next": "^14.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "wagmi": "^2.5.0",
+    "viem": "^2.7.0",
+    "@tanstack/react-query": "^5.17.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.312.0"
   },
   "devDependencies": {
     "hardhat": "^2.19.4",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "typescript": "^5.3.0"
+    "@openzeppelin/contracts": "^5.0.0",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.33",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.1.0"
   }
 }
