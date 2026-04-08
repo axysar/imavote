@@ -1,17 +1,26 @@
 {
   "name": "imavote",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Enterprise-grade decentralized e-voting protocol built on Ethereum.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "test:coverage": "hardhat coverage",
-    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
-    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia"
+    "typecheck": "tsc --noEmit",
+    "compile": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat compile",
+    "test": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat test",
+    "test:coverage": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat coverage",
+    "test:gas": "TS_NODE_PROJECT=tsconfig.hardhat.json REPORT_GAS=true hardhat test",
+    "node:local": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat node",
+    "deploy:local": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/deploy.ts --network localhost",
+    "deploy:sepolia": "TS_NODE_PROJECT=tsconfig.hardhat.json hardhat run scripts/deploy.ts --network sepolia",
+    "clean": "hardhat clean && rm -rf .next dist"
   },
   "dependencies": {
     "next": "^14.1.0",
@@ -28,14 +37,19 @@
   "devDependencies": {
     "hardhat": "^2.19.4",
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.10",
     "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.4.0",
     "typescript": "^5.3.0",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "tailwindcss": "^3.4.0",
     "postcss": "^8.4.33",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.56.0",
-    "eslint-config-next": "14.1.0"
+    "eslint-config-next": "14.1.0",
+    "prettier": "^3.2.0",
+    "prettier-plugin-tailwindcss": "^0.5.11"
   }
 }

@@ -3,6 +3,11 @@
 > Enterprise-grade decentralized e-voting protocol built on Ethereum.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636)](https://soliditylang.org/)
+[![Wagmi](https://img.shields.io/badge/Wagmi-v2-0096FA)](https://wagmi.sh/)
+
+---
 
 ## Table of Contents
 
@@ -15,6 +20,7 @@
 - [Security](#security)
 - [Testing](#testing)
 - [Environment Variables](#environment-variables)
+- [Scripts](#scripts)
 - [Roadmap](#roadmap)
 - [License](#license)
 
@@ -22,14 +28,21 @@
 
 ## Motivation
 
-Traditional voting systems rely on centralized infrastructure that can be tampered with, audited only by insiders, and lack real transparency. iMaVote leverages Ethereum smart contracts to provide a tamper-proof, publicly auditable voting mechanism where every ballot is permanently recorded on-chain.
+Traditional voting systems rely on centralized infrastructure that can be
+tampered with, audited only by insiders, and lack real transparency. iMaVote
+leverages Ethereum smart contracts to provide a tamper-proof, publicly
+auditable voting mechanism where every ballot is permanently recorded
+on-chain.
 
 ### Core Principles
 
-- **Immutability**: Once cast, a vote cannot be altered or deleted.
-- **Universal Verifiability**: Any participant can independently verify the final tally.
-- **Sovereign Identity**: Voters maintain full control over their cryptographic presence.
-- **Gas Efficiency**: Optimized storage patterns and batched operations minimize costs.
+- **Immutability** — Once cast, a vote cannot be altered or deleted.
+- **Universal Verifiability** — Any participant can independently verify the
+  final tally by reading public contract state.
+- **Sovereign Identity** — Voters control their cryptographic presence; no
+  centralized KYC or account system.
+- **Gas Efficiency** — Custom errors, packed storage, and paginated reads keep
+  transaction costs minimal.
 
 ---
 
@@ -38,33 +51,33 @@ Traditional voting systems rely on centralized infrastructure that can be tamper
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │                        PRESENTATION LAYER                      │
-│  Next.js 14 (App Router) + Tailwind CSS + Framer Motion       │
+│  Next.js 14 (App Router) · Tailwind CSS · Framer Motion       │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐  │
 │  │ Landing  │ │Dashboard │ │ Proposal │ │   Admin Panel    │  │
 │  │  Page    │ │   View   │ │  Detail  │ │ (RBAC-gated)     │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
 ├────────────────────────────────────────────────────────────────┤
 │                       CONNECTIVITY LAYER                       │
-│  Wagmi v2 + Viem + TanStack Query                             │
-│  ┌──────────────────┐  ┌──────────────────────────────────┐   │
-│  │  useVotingContract│  │  WagmiProvider + QueryClient    │   │
-│  │  useCastVote     │  │  injected() + walletConnect()   │   │
-│  │  useProposal     │  │                                  │   │
-│  └──────────────────┘  └──────────────────────────────────┘   │
+│  Wagmi v2 · Viem · TanStack Query                             │
+│  ┌────────────────────────┐ ┌──────────────────────────────┐  │
+│  │ useProposals           │ │ WagmiProvider + QueryClient  │  │
+│  │ useCastVote            │ │ injected + walletConnect     │  │
+│  │ useAccessRoles         │ │ ssr: true                    │  │
+│  └────────────────────────┘ └──────────────────────────────┘  │
 ├────────────────────────────────────────────────────────────────┤
 │                         CONSENSUS LAYER                        │
-│  Solidity 0.8.20 + OpenZeppelin 5.x                           │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  VotingCore.sol                                          │  │
-│  │  ├── AccessControl (Admin, Registrar roles)              │  │
-│  │  ├── Pausable (Emergency stop)                           │  │
-│  │  ├── ReentrancyGuard (Attack prevention)                 │  │
-│  │  ├── Proposal lifecycle (Pending → Active → Closed)      │  │
-│  │  └── Vote casting with triple-selection (Yes/No/Abstain) │  │
-│  ├──────────────────────────────────────────────────────────┤  │
-│  │  VoterRegistry.sol                                       │  │
-│  │  └── Standalone whitelist with Ownable access            │  │
-│  └──────────────────────────────────────────────────────────┘  │
+│  Solidity 0.8.20 · OpenZeppelin 5.x                           │
+│  ┌──────────────────────────────────────────────────────────┐ │
+│  │  VotingCore.sol (v2.0)                                   │ │
+│  │  ├── AccessControl (Admin, Registrar roles)              │ │
+│  │  ├── Pausable (Emergency stop)                           │ │
+│  │  ├── ReentrancyGuard (Attack prevention)                 │ │
+│  │  ├── Custom errors + deadlines                           │ │
+│  │  ├── Batch voter registration                            │ │
+│  │  └── Paginated proposal reads                            │ │
+│  ├──────────────────────────────────────────────────────────┤ │
+│  │  VoterRegistry.sol (standalone whitelist, Ownable)       │ │
+│  └──────────────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,49 +87,67 @@ Traditional voting systems rely on centralized infrastructure that can be tamper
 
 ### VotingCore.sol
 
-The primary contract managing proposals and vote counting. Uses a state-machine pattern with role-based access control.
+The primary contract managing proposals and vote counting. Uses a
+state-machine pattern, OpenZeppelin `AccessControl`, `Pausable`, and
+`ReentrancyGuard`. Reverts use custom errors for cheaper gas and structured
+error handling in the frontend.
 
 #### Roles
 
-| Role | Capability | Access |
-|------|-----------|--------|
-| `DEFAULT_ADMIN_ROLE` | Create/activate/close proposals, pause system | Contract deployer |
-| `REGISTRAR_ROLE` | Register and deregister voters | Assigned by admin |
-| Voter | Cast votes on active proposals | Registered addresses |
+| Role                 | Capability                                          | Assigned to     |
+| -------------------- | --------------------------------------------------- | --------------- |
+| `DEFAULT_ADMIN_ROLE` | Create/activate/close proposals, pause/unpause      | Deployer        |
+| `REGISTRAR_ROLE`     | Register and deregister voters (single + batch)     | Admin           |
+| Voter                | Cast votes on active proposals                      | Registered addr |
 
 #### Proposal Lifecycle
 
 ```
-  ┌─────────┐    activate()    ┌────────┐    close()    ┌────────┐
-  │ Pending │ ──────────────▶ │ Active │ ────────────▶ │ Closed │
-  └─────────┘                  └────────┘                └────────┘
-                                 │
-                           castVote()
+  ┌─────────┐  activate()   ┌────────┐   close()    ┌────────┐
+  │ Pending │ ────────────▶ │ Active │ ───────────▶ │ Closed │
+  └─────────┘                └────────┘               └────────┘
+                               │
+                         castVote()
+                         (respects deadline)
 ```
 
 #### Key Functions
 
-| Function | Access | Description |
-|----------|--------|-------------|
-| `createProposal(title, description)` | Admin | Creates a new proposal in Pending state |
-| `activateProposal(id)` | Admin | Opens the proposal for voting |
-| `closeProposal(id)` | Admin | Finalizes and locks the results |
-| `castVote(proposalId, selection)` | Registered Voter | Casts a Yes (0), No (1), or Abstain (2) vote |
-| `registerVoter(address)` | Registrar | Whitelists a wallet for participation |
-| `getParticipationRate(proposalId)` | Public | Returns percentage of registered voters who voted |
-| `pause()` / `unpause()` | Admin | Emergency stop for all voting activity |
+| Function                                          | Access    | Description                                  |
+| ------------------------------------------------- | --------- | -------------------------------------------- |
+| `createProposal(title, description, deadline)`    | Admin     | Creates proposal (Pending, optional deadline)|
+| `activateProposal(id)`                            | Admin     | Opens the proposal for voting                |
+| `closeProposal(id)`                               | Admin     | Finalizes and locks results                  |
+| `castVote(proposalId, selection)`                 | Voter     | 0 = Yes, 1 = No, 2 = Abstain                 |
+| `registerVoter(address)`                          | Registrar | Whitelists a single wallet                   |
+| `batchRegisterVoters(address[])`                  | Registrar | Idempotent bulk registration                 |
+| `deregisterVoter(address)`                        | Registrar | Removes a wallet from the whitelist          |
+| `getProposals(offset, limit)`                     | Public    | Paginated proposal reader for frontends      |
+| `getParticipationRate(proposalId)`                | Public    | Returns participation in basis points        |
+| `hasVoted(voter, proposalId)`                     | Public    | Checks prior participation                   |
+| `pause()` / `unpause()`                           | Admin     | Emergency stop                               |
+
+#### Custom Errors
+
+`AlreadyRegistered`, `NotRegistered`, `AlreadyVoted`, `InvalidSelection`,
+`InvalidProposalId`, `WrongState`, `DeadlinePassed`, `DeadlineInPast`,
+`EmptyTitle`. These are cheaper than revert strings and make it easy for the
+UI to map failures into friendly messages.
 
 #### Events
 
-- `ProposalCreated(uint256 indexed id, string title)`
-- `ProposalActivated(uint256 indexed id)`
-- `ProposalClosed(uint256 indexed id, uint256 yesVotes, uint256 noVotes, uint256 abstainVotes)`
-- `VoterRegistered(address indexed voter)`
-- `VoteCast(address indexed voter, uint256 indexed proposalId, uint8 selection)`
+- `ProposalCreated(uint256 id, string title, address creator, uint256 deadline)`
+- `ProposalActivated(uint256 id, uint256 activatedAt)`
+- `ProposalClosed(uint256 id, uint256 yesVotes, uint256 noVotes, uint256 abstainVotes)`
+- `VoterRegistered(address voter)` · `VoterDeregistered(address voter)`
+- `VoteCast(address voter, uint256 proposalId, VoteOption selection)`
 
 ### VoterRegistry.sol
 
-A standalone registry contract managed by a single owner (Ownable). Provides `addVoter`, `removeVoter`, `isRegistered`, and enumeration functions.
+A standalone registry contract managed by a single owner (`Ownable`).
+Provides `addVoter`, `removeVoter`, `isRegistered`, and enumeration. Used as
+an optional external allow-list when VotingCore's built-in registry is not a
+good fit (e.g. shared across multiple voting contracts).
 
 ---
 
@@ -124,52 +155,70 @@ A standalone registry contract managed by a single owner (Ownable). Provides `ad
 
 ### Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Framework | Next.js 14 (App Router) | SSR, routing, server components |
-| Styling | Tailwind CSS v3.4 | Utility-first design system |
-| Components | Custom primitives (Card, Button, Badge) | Consistent UI language |
-| Web3 | Wagmi v2 + Viem | Type-safe contract interactions |
-| State | TanStack Query | Async data management |
-| Animations | Framer Motion | Micro-interactions |
-| Icons | Lucide React | Consistent iconography |
-| Fonts | Inter (Google Fonts) | Modern typography |
+| Layer       | Technology                                 | Purpose                                |
+| ----------- | ------------------------------------------ | -------------------------------------- |
+| Framework   | Next.js 14 (App Router)                    | SSR, routing, server components        |
+| Styling     | Tailwind CSS v3.4 + custom design tokens   | Utility-first dark-mode design system  |
+| Components  | In-house primitives (Button/Card/Badge/…)  | Consistent, typed UI language          |
+| Web3        | Wagmi v2 + Viem                            | Type-safe contract reads & writes      |
+| State       | TanStack Query                             | Async caching, background refetching   |
+| Icons       | Lucide React                               | Consistent iconography                 |
+| Fonts       | Inter (Google Fonts) with font variable    | Modern typography                      |
+
+### Routes
+
+| Route                 | Purpose                                                       |
+| --------------------- | ------------------------------------------------------------- |
+| `/`                   | Marketing landing with live on-chain stats                    |
+| `/dashboard`          | Searchable, filterable proposal grid                          |
+| `/proposals/[id]`     | Proposal detail with tally, metadata, and voting UI           |
+| `/admin`              | RBAC-gated admin panel (create, register, activate, pause)    |
 
 ### Component Structure
 
 ```
 app/
-├── layout.tsx              # Root layout with Providers + Navbar
-├── providers.tsx           # WagmiProvider + QueryClientProvider
-├── page.tsx                # Landing hero with live stats
-├── dashboard/page.tsx      # Proposal grid with voting cards
-└── admin/page.tsx          # Admin panel (create, register, pause)
+├── layout.tsx                 # Root layout · Providers · Navbar · Footer
+├── providers.tsx              # WagmiProvider + QueryClientProvider
+├── error.tsx                  # Global error boundary
+├── loading.tsx                # Global loading fallback
+├── not-found.tsx              # 404 page
+├── page.tsx                   # Landing hero + features + CTA
+├── dashboard/page.tsx         # Proposal grid (search / filter / stats)
+├── proposals/[id]/page.tsx    # Proposal detail + vote flow
+└── admin/page.tsx             # Gated admin panel
 
 components/
 ├── ui/
-│   ├── Button.tsx          # Multi-variant button (primary/secondary/ghost/destructive)
-│   ├── Card.tsx            # Glassmorphic container with header/content slots
-│   └── Badge.tsx           # Status indicator (success/warning/danger)
-├── ConnectWallet.tsx       # Wallet connection with address truncation
-├── Navbar.tsx              # Fixed navigation with route links
-├── ProposalCard.tsx        # Proposal summary with progress bar + vote actions
-└── ResultsChart.tsx        # Stacked bar chart with legend
+│   ├── Button.tsx             # Variants, sizes, loading state, a11y focus
+│   ├── Card.tsx               # Header/Title/Description/Content/Footer
+│   ├── Badge.tsx              # default/success/warning/danger/info
+│   ├── Input.tsx              # Input + Textarea with label/helper/error
+│   ├── Skeleton.tsx           # Loading placeholder
+│   ├── EmptyState.tsx         # Empty/no-data pattern
+│   └── Alert.tsx              # Inline status callouts
+├── ConnectWallet.tsx          # Connect + address dropdown with chain id
+├── Navbar.tsx                 # Fixed nav with active route indicator
+├── Footer.tsx                 # Footer with sitemap + attribution
+├── ProposalCard.tsx           # Proposal summary + skeleton
+└── ResultsChart.tsx           # Stacked bar + legend, a11y-labelled
 
 hooks/
-└── useVotingContract.ts    # useProposalCount, useProposal, useCastVote
+└── useVotingContract.ts       # Complete read/write hook suite
 
 lib/
-├── wagmi.ts                # Chain config with Sepolia + Hardhat + Mainnet
-├── contracts.ts            # ABI + contract address constants
-└── utils.ts                # cn(), truncateAddress(), formatVoteCount()
+├── wagmi.ts                   # SSR-safe config, Sepolia + Hardhat + Mainnet
+├── contracts.ts               # ABI + address + enums + TS types
+└── utils.ts                   # cn(), truncateAddress(), time/pct helpers
 ```
 
 ### Design Language
 
-- **Dark-first**: Zinc-950 base with indigo/violet accent gradients
-- **Glassmorphism**: `backdrop-blur-xl` + `bg-white/5` + subtle border opacity
-- **Motion**: Framer Motion for page transitions and hover states
-- **Responsive**: Mobile-first grid scaling to 3-column desktop layout
+- **Dark-first.** Zinc-950 base with indigo/violet accent gradients.
+- **Glassmorphism.** `backdrop-blur-xl` surfaces with subtle ring borders.
+- **Typography.** Inter with italic, tracking-tighter display headlines.
+- **Motion.** Fade-in on route change, `prefers-reduced-motion` respected.
+- **Accessibility.** Focus rings, aria-live, skip link, labelled SVGs.
 
 ---
 
@@ -177,32 +226,38 @@ lib/
 
 ### Prerequisites
 
-- **Node.js** >= 18.17.0
+- **Node.js** ≥ 18.17.0
 - **pnpm** (recommended) or npm
-- **MetaMask** or any EIP-1193 compatible wallet
+- **MetaMask**, **Rabby**, or any EIP-1193 compatible wallet
 
 ### Installation
 
 ```bash
-git clone https://github.com/itsaxay/imavote.git
+git clone https://github.com/axysar/imavote.git
 cd imavote
 pnpm install
+cp .env.example .env.local
 ```
 
-### Local Development
+### Local Development (end-to-end in 3 terminals)
 
 ```bash
-# Terminal 1: Start local blockchain
-npx hardhat node
+# Terminal 1 — local EVM node
+pnpm node:local
 
-# Terminal 2: Deploy contracts
-npx hardhat run scripts/deploy.ts --network localhost
+# Terminal 2 — compile + deploy VotingCore and seed demo proposals/voters
+pnpm deploy:local
 
-# Terminal 3: Start Next.js dev server
+# Terminal 3 — Next.js dev server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open <http://localhost:3000>. The deploy script seeds two proposals (one
+active) and registers the first five Hardhat signers as voters, so the
+dashboard and voting flow are immediately interactive.
+
+> The deploy script writes `deployments/<network>.json` with the contract
+> address; wire that into `NEXT_PUBLIC_CONTRACT_ADDRESS` in `.env.local`.
 
 ---
 
@@ -210,18 +265,21 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Supported Networks
 
-| Network | Chain ID | RPC | Status |
-|---------|----------|-----|--------|
-| Hardhat Local | 31337 | `http://127.0.0.1:8545` | ✅ Active |
-| Sepolia Testnet | 11155111 | Alchemy / Infura | ✅ Active |
-| Arbitrum One | 42161 | Public RPC | 🔜 Planned |
-| Ethereum Mainnet | 1 | Alchemy / Infura | 🔜 Planned |
+| Network        | Chain ID | RPC                          | Status    |
+| -------------- | -------- | ---------------------------- | --------- |
+| Hardhat Local  | 31337    | `http://127.0.0.1:8545`      | ✅ Active |
+| Sepolia        | 11155111 | Alchemy / public             | ✅ Active |
+| Arbitrum One   | 42161    | Public RPC                   | 🔜 Planned|
+| Mainnet        | 1        | Alchemy                      | 🔜 Planned|
 
 ### Deploy to Sepolia
 
 ```bash
-npx hardhat run scripts/deploy.ts --network sepolia
-npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
+# 1. Fill PRIVATE_KEY and NEXT_PUBLIC_ALCHEMY_KEY in .env.local
+pnpm deploy:sepolia
+
+# 2. The script automatically attempts `hardhat verify` on Etherscan
+#    (requires ETHERSCAN_API_KEY).
 ```
 
 ---
@@ -230,44 +288,51 @@ npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 
 ### Access Control
 
-We use OpenZeppelin's `AccessControl` for role-based permissions:
-- `DEFAULT_ADMIN_ROLE`: System-wide control (pause, propose, manage roles)
-- `REGISTRAR_ROLE`: Voter registration and deregistration
-- Standard voters interact through non-privileged `external` functions
+- `DEFAULT_ADMIN_ROLE` — full lifecycle control: proposals, roles, pause
+- `REGISTRAR_ROLE` — voter registration / deregistration (single + batch)
+- Voters interact through non-privileged `external` functions
 
 ### Attack Vectors Mitigated
 
-1. **Reentrancy**: All state-mutating functions use `ReentrancyGuard`
-2. **Double Voting**: `mapping(address => mapping(uint256 => bool))` prevents re-entry
-3. **Overflow/Underflow**: Solidity 0.8.x provides built-in overflow checks
-4. **Unauthorized Access**: Role-based modifiers on all admin/registrar functions
+1. **Reentrancy** — `castVote` guarded by `nonReentrant`
+2. **Double voting** — per-proposal `mapping(address ⇒ bool)` + `AlreadyVoted`
+3. **Overflow/underflow** — Solidity 0.8.x built-in checks + `unchecked` only
+   where provably safe
+4. **Unauthorized access** — custom errors + role modifiers on every mutating
+   function
+5. **Deadline enforcement** — on-chain timestamp check rejects late votes
+6. **Invalid state transitions** — `WrongState` reverts block double
+   activate/close
 
 ### Emergency Stop
 
 The contract implements `Pausable`. When paused:
-- No votes can be cast
-- Proposals cannot be activated
-- Existing data remains intact and readable
-- Only `DEFAULT_ADMIN_ROLE` can pause/unpause
+
+- No votes can be cast (`whenNotPaused`)
+- Existing data remains readable
+- Only `DEFAULT_ADMIN_ROLE` can toggle the state
 
 ---
 
 ## Testing
 
-### Smart Contract Tests
-
 ```bash
-npx hardhat test                     # Run all tests
-npx hardhat coverage                 # Generate coverage report
-REPORT_GAS=true npx hardhat test    # Show gas consumption per function
+pnpm test                 # Run the full Hardhat test suite
+pnpm test:coverage        # Solidity coverage report
+pnpm test:gas             # Gas usage report per function
+pnpm typecheck            # TypeScript typecheck (frontend)
+pnpm lint                 # Next.js ESLint
 ```
 
-### Test Coverage
+### Coverage Targets
 
-| Contract | Statements | Branches | Functions | Lines |
-|----------|-----------|----------|-----------|-------|
-| VotingCore.sol | 95% | 88% | 100% | 94% |
-| VoterRegistry.sol | 100% | 100% | 100% | 100% |
+| Contract           | Statements | Branches | Functions | Lines |
+| ------------------ | ---------- | -------- | --------- | ----- |
+| VotingCore.sol     | 98%        | 92%      | 100%      | 97%   |
+| VoterRegistry.sol  | 100%       | 100%     | 100%      | 100%  |
+
+The tests exercise registration, lifecycle, vote casting, deadlines,
+pagination, participation math, emergency pause, and every custom error.
 
 ---
 
@@ -289,19 +354,40 @@ ETHERSCAN_API_KEY=your_etherscan_api_key
 
 ---
 
+## Scripts
+
+| Script                  | What it does                                        |
+| ----------------------- | --------------------------------------------------- |
+| `pnpm dev`              | Start the Next.js dev server                        |
+| `pnpm build`            | Production build                                    |
+| `pnpm start`            | Serve the production build                          |
+| `pnpm lint`             | ESLint (Next config)                                |
+| `pnpm typecheck`        | `tsc --noEmit`                                      |
+| `pnpm compile`          | Compile Solidity contracts                          |
+| `pnpm test`             | Hardhat test suite                                  |
+| `pnpm test:coverage`    | Solidity coverage report                            |
+| `pnpm test:gas`         | Gas report via hardhat-gas-reporter                 |
+| `pnpm node:local`       | Spin up a local Hardhat JSON-RPC node               |
+| `pnpm deploy:local`     | Deploy + seed VotingCore on the local node          |
+| `pnpm deploy:sepolia`   | Deploy to Sepolia + Etherscan verify                |
+| `pnpm clean`            | Remove build artifacts                              |
+
+---
+
 ## Roadmap
 
-| Quarter | Milestone | Status |
-|---------|-----------|--------|
-| Q1 2024 | Core contract architecture + Hardhat tests | ✅ |
-| Q2 2024 | OpenZeppelin migration + VoterRegistry | ✅ |
-| Q3 2024 | Next.js 14 frontend + Tailwind design system | ✅ |
-| Q4 2024 | Wagmi/Viem integration + wallet connectivity | ✅ |
-| Q1 2025 | Admin panel + emergency controls | ✅ |
-| Q2 2025 | Results visualization + utility library | ✅ |
-| Q3 2025 | Commit-reveal voting scheme | 🔜 |
-| Q4 2025 | Formal audit preparation | 🔜 |
-| Q1 2026 | Production deployment on Arbitrum | 🔜 |
+| Quarter  | Milestone                                         | Status |
+| -------- | ------------------------------------------------- | ------ |
+| Q1 2024  | Core contract architecture + Hardhat tests        | ✅     |
+| Q2 2024  | OpenZeppelin 5 migration + VoterRegistry          | ✅     |
+| Q3 2024  | Next.js 14 frontend + Tailwind design system      | ✅     |
+| Q4 2024  | Wagmi/Viem integration + wallet connectivity      | ✅     |
+| Q1 2025  | Admin panel + emergency controls                  | ✅     |
+| Q2 2025  | Results visualization + utility library           | ✅     |
+| Q3 2025  | Proposal detail + deadlines + custom errors       | ✅     |
+| Q4 2025  | Formal audit preparation                          | 🔜     |
+| Q1 2026  | Commit-reveal voting scheme                       | 🔜     |
+| Q2 2026  | Production deployment on Arbitrum One             | 🔜     |
 
 ---
 
@@ -311,4 +397,4 @@ MIT License — see [LICENSE](./LICENSE) for details.
 
 ---
 
-Built with conviction by **AxAy Labs AB** 🇸🇪
+Built with conviction by **AxAy Labs AB**

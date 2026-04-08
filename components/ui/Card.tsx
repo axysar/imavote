@@ -1,32 +1,95 @@
-import { ReactNode } from "react";
+import { HTMLAttributes, ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
-  className?: string;
+  interactive?: boolean;
 }
 
-export function Card({ children, className = "" }: CardProps) {
+export function Card({
+  children,
+  className,
+  interactive = false,
+  ...props
+}: CardProps) {
   return (
     <div
-      className={`rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-xl p-6 ${className}`}
+      className={cn(
+        "rounded-2xl border border-white/5 bg-zinc-900/50 backdrop-blur-xl p-6",
+        interactive &&
+          "transition-all duration-200 hover:border-white/10 hover:bg-zinc-900/70",
+        className,
+      )}
+      {...props}
     >
       {children}
     </div>
   );
 }
 
-export function CardHeader({ children }: { children: ReactNode }) {
-  return <div className="mb-4">{children}</div>;
+export function CardHeader({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("mb-4", className)}>{children}</div>;
 }
 
-export function CardTitle({ children }: { children: ReactNode }) {
-  return <h3 className="text-lg font-bold tracking-tight">{children}</h3>;
+export function CardTitle({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <h3 className={cn("text-lg font-bold tracking-tight text-white", className)}>
+      {children}
+    </h3>
+  );
 }
 
-export function CardDescription({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-zinc-400 mt-1">{children}</p>;
+export function CardDescription({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p className={cn("text-sm text-zinc-400 mt-1 leading-relaxed", className)}>
+      {children}
+    </p>
+  );
 }
 
-export function CardContent({ children }: { children: ReactNode }) {
-  return <div>{children}</div>;
+export function CardContent({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={className}>{children}</div>;
+}
+
+export function CardFooter({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mt-5 pt-4 border-t border-white/5 flex items-center gap-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }

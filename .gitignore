@@ -1,9 +1,33 @@
+# Dependencies
 node_modules/
+
+# Next.js
 .next/
+out/
+
+# Build outputs
 dist/
+build/
 coverage/
-.env
-.env.local
+
+# Hardhat
 artifacts/
 cache/
 typechain-types/
+deployments/*.json
+!deployments/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# Misc
+*.tsbuildinfo
+.turbo/
