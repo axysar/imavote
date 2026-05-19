@@ -6,7 +6,7 @@
 
 | Layer | Framework | Test Files | Cases | Coverage |
 |---|---|---|---|---|
-| Smart contracts | Hardhat + Chai | 3 | 43 | ~95% branches |
+| Smart contracts | Hardhat + Chai | 4 | 51 | ~95% branches |
 | Frontend hooks | — | 0 | 0 | 0% |
 | UI components | — | 0 | 0 | 0% |
 | E2E flows | — | 0 | 0 | 0% |
@@ -21,7 +21,7 @@
     ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 ```
 
-## Contract Test Coverage (43 cases)
+## Contract Test Coverage (51 cases)
 
 ### VotingCore (31 tests)
 - Voter registration: register, duplicate prevention, zero-address, unauthorized, batch, deregister
@@ -37,12 +37,18 @@
 ### VoterRegistry (8 tests)
 - CRUD: add, duplicate, zero-address, unauthorized, remove, non-registered, enumerate, out-of-bounds
 
+### VotingStrategies (8 tests)
+- equalWeight: returns 1 for any address
+- fixedWeight: returns provided value
+- quadraticWeight: sqrt of perfect squares, floors non-perfect squares
+- cappedWeight: below cap, above cap, equal, zero edge cases
+
 ## Targets
 
 | Metric | Current | Target |
 |---|---|---|
 | Contract branch coverage | ~95% | 98% |
-| Contract test cases | 43 | 60+ |
+| Contract test cases | 51 | 60+ |
 | Frontend hook tests | 0 | 20+ |
 | Component tests | 0 | 10+ |
 | E2E critical paths | 0 | 5+ |
