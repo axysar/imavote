@@ -27,6 +27,12 @@ describe("VoteDelegation", () => {
       expect(await delegation.getWeight(bob.address)).to.equal(1);
     });
 
+    it("prevents delegation to zero address", async () => {
+      await expect(
+        delegation.connect(alice).setDelegate(ethers.ZeroAddress),
+      ).to.be.revertedWithCustomError(delegation, "ZeroAddress");
+    });
+
     it("prevents self-delegation", async () => {
       await expect(
         delegation.connect(alice).setDelegate(alice.address),

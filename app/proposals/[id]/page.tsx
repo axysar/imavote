@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -46,6 +46,7 @@ import {
   getProposalStateLabel,
   pct,
 } from "@/lib/utils";
+import { getExplorerAddressUrl, getChainMeta } from "@/lib/chains";
 
 type ProposalTuple = readonly [
   bigint, // id
@@ -73,6 +74,7 @@ export default function ProposalDetailPage() {
   }, [params.id]);
 
   const { isConnected } = useAccount();
+  const chainId = useChainId();
   const { data, isLoading, isError, refetch } = useProposal(id);
   const { data: isRegistered } = useIsVoterRegistered();
   const { data: alreadyVoted } = useHasVoted(id);
@@ -405,15 +407,21 @@ export default function ProposalDetailPage() {
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Secured by VotingCore v2 · AccessControl + ReentrancyGuard
                 </div>
-                <a
-                  href={`https://sepolia.etherscan.io/address/${VOTING_CORE_ADDRESS}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Verify on Etherscan
-                </a>
+                {(() => {
+                  const url = getExplorerAddressUrl(chainId, VOTING_CORE_ADDRESS);
+                  const meta = getChainMeta(chainId);
+                  return url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Verify on {meta.explorerName}
+                    </a>
+                  ) : null;
+                })()}
               </div>
             </CardContent>
           </Card>

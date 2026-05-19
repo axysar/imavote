@@ -27,9 +27,13 @@ describe("VoterRegistry", () => {
 
   it("prevents duplicates", async () => {
     await registry.addVoter(voter1.address);
-    await expect(registry.addVoter(voter1.address)).to.be.revertedWith(
-      "VoterRegistry: already registered",
-    );
+    await expect(registry.addVoter(voter1.address))
+      .to.be.revertedWithCustomError(registry, "AlreadyRegistered");
+  });
+
+  it("rejects zero address", async () => {
+    await expect(registry.addVoter(ethers.ZeroAddress))
+      .to.be.revertedWithCustomError(registry, "ZeroAddress");
   });
 
   it("non-owner cannot add voters", async () => {
@@ -45,6 +49,11 @@ describe("VoterRegistry", () => {
     expect(await registry.isRegistered(voter1.address)).to.equal(false);
   });
 
+  it("rejects removing non-registered voter", async () => {
+    await expect(registry.removeVoter(voter1.address))
+      .to.be.revertedWithCustomError(registry, "NotRegistered");
+  });
+
   it("enumerates voters by index", async () => {
     await registry.addVoter(voter1.address);
     await registry.addVoter(voter2.address);
@@ -53,8 +62,7 @@ describe("VoterRegistry", () => {
   });
 
   it("rejects out-of-bounds access", async () => {
-    await expect(registry.getVoterAt(0)).to.be.revertedWith(
-      "VoterRegistry: out of bounds",
-    );
+    await expect(registry.getVoterAt(0))
+      .to.be.revertedWithCustomError(registry, "OutOfBounds");
   });
 });

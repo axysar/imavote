@@ -47,6 +47,12 @@ describe("VotingCore", () => {
         .withArgs(voter1.address);
     });
 
+    it("rejects zero-address registration", async () => {
+      await expect(
+        votingCore.connect(registrar).registerVoter(ethers.ZeroAddress),
+      ).to.be.revertedWithCustomError(votingCore, "ZeroAddress");
+    });
+
     it("rejects unauthorized registration attempts", async () => {
       await expect(
         votingCore.connect(outsider).registerVoter(voter1.address),

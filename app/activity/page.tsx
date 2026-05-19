@@ -21,6 +21,8 @@ import {
   type ActivityEvent,
 } from "@/hooks/useContractEvents";
 import { truncateAddress } from "@/lib/utils";
+import { getExplorerTxUrl } from "@/lib/chains";
+import { useChainId } from "wagmi";
 
 const EVENT_META: Record<
   ActivityEvent["type"],
@@ -35,6 +37,7 @@ const EVENT_META: Record<
 
 export default function ActivityPage() {
   const { events, isLoading, error } = useRecentActivity();
+  const chainId = useChainId();
 
   return (
     <main className="min-h-screen py-16 px-6 md:px-12 lg:px-24 max-w-5xl mx-auto">
@@ -122,14 +125,21 @@ export default function ActivityPage() {
                       </div>
                       <EventDetails event={ev} />
                     </div>
-                    <a
-                      href={`#tx-${ev.transactionHash}`}
-                      className="shrink-0 text-zinc-500 hover:text-indigo-400 transition-colors"
-                      title="View transaction"
-                      aria-label="View transaction"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                    {(() => {
+                      const txUrl = getExplorerTxUrl(chainId, ev.transactionHash);
+                      return txUrl ? (
+                        <a
+                          href={txUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 text-zinc-500 hover:text-indigo-400 transition-colors"
+                          title="View transaction"
+                          aria-label="View transaction"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      ) : null;
+                    })()}
                   </li>
                 );
               })}

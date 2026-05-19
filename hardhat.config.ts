@@ -12,6 +12,10 @@ dotenv.config();
 const PRIVATE_KEY = process.env.PRIVATE_KEY ?? "";
 const ALCHEMY_KEY = process.env.NEXT_PUBLIC_ALCHEMY_KEY ?? "";
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY ?? "";
+const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY ?? "";
+const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY ?? "";
+
+const accounts = PRIVATE_KEY ? [PRIVATE_KEY] : [];
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -32,16 +36,70 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
     },
+    // --- Testnets ---
     sepolia: {
       url: ALCHEMY_KEY
         ? `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
         : "https://rpc.sepolia.org",
       chainId: 11155111,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      accounts,
+    },
+    arbitrumSepolia: {
+      url: ALCHEMY_KEY
+        ? `https://arb-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
+        : "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      accounts,
+    },
+    baseSepolia: {
+      url: ALCHEMY_KEY
+        ? `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
+        : "https://sepolia.base.org",
+      chainId: 84532,
+      accounts,
+    },
+    // --- Mainnets ---
+    mainnet: {
+      url: ALCHEMY_KEY
+        ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+        : "https://cloudflare-eth.com",
+      chainId: 1,
+      accounts,
+    },
+    arbitrum: {
+      url: ALCHEMY_KEY
+        ? `https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+        : "https://arb1.arbitrum.io/rpc",
+      chainId: 42161,
+      accounts,
+    },
+    base: {
+      url: ALCHEMY_KEY
+        ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+        : "https://mainnet.base.org",
+      chainId: 8453,
+      accounts,
     },
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: ETHERSCAN_API_KEY,
+      sepolia: ETHERSCAN_API_KEY,
+      arbitrumOne: ARBISCAN_API_KEY,
+      arbitrumSepolia: ARBISCAN_API_KEY,
+      base: BASESCAN_API_KEY,
+      baseSepolia: BASESCAN_API_KEY,
+    },
+    customChains: [
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+    ],
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS === "true",

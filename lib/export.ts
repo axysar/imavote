@@ -56,34 +56,5 @@ export function downloadCSV(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function getEtherscanUrl(
-  hash: string,
-  chainId: number,
-): string {
-  switch (chainId) {
-    case 1:
-      return `https://etherscan.io/tx/${hash}`;
-    case 11155111:
-      return `https://sepolia.etherscan.io/tx/${hash}`;
-    case 42161:
-      return `https://arbiscan.io/tx/${hash}`;
-    default:
-      return `#tx-${hash}`;
-  }
-}
-
-export function getContractUrl(
-  address: string,
-  chainId: number,
-): string {
-  switch (chainId) {
-    case 1:
-      return `https://etherscan.io/address/${address}`;
-    case 11155111:
-      return `https://sepolia.etherscan.io/address/${address}`;
-    case 42161:
-      return `https://arbiscan.io/address/${address}`;
-    default:
-      return `#addr-${address}`;
-  }
-}
+// Explorer URL helpers have moved to lib/chains.ts
+export { getExplorerTxUrl, getExplorerAddressUrl } from "./chains";

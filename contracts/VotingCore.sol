@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
@@ -95,6 +95,7 @@ contract VotingCore is AccessControl, Pausable, ReentrancyGuard {
     error DeadlinePassed(uint256 proposalId, uint256 deadline);
     error DeadlineInPast(uint256 deadline);
     error EmptyTitle();
+    error ZeroAddress();
 
     // ---------------------------------------------------------------------
     // Events
@@ -158,6 +159,7 @@ contract VotingCore is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function _registerVoter(address _voter) internal {
+        if (_voter == address(0)) revert ZeroAddress();
         if (voters[_voter].isRegistered) revert AlreadyRegistered(_voter);
         voters[_voter].isRegistered = true;
         unchecked {

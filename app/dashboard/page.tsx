@@ -18,6 +18,8 @@ import {
 } from "@/hooks/useVotingContract";
 import { ProposalState } from "@/lib/contracts";
 import { formatVoteCount } from "@/lib/utils";
+import { getChainMeta } from "@/lib/chains";
+import { useChainId } from "wagmi";
 
 type FilterKey = "all" | "active" | "pending" | "closed";
 type SortKey = "newest" | "oldest" | "most-votes" | "least-votes";
@@ -40,6 +42,9 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("newest");
   const [query, setQuery] = useState("");
+
+  const chainId = useChainId();
+  const chainMeta = getChainMeta(chainId);
 
   const { proposals, isLoading, isError, refetch } = useProposals(1n, 100n);
   const { data: totalVoters } = useTotalRegisteredVoters();
@@ -90,7 +95,7 @@ export default function DashboardPage() {
       <header className="mb-10">
         <div className="flex flex-wrap items-center gap-3 mb-3">
           <Badge variant="info" dot>
-            Live on-chain
+            {chainMeta.shortName}
           </Badge>
           {isPaused ? (
             <Badge variant="danger" dot>

@@ -17,8 +17,12 @@ import {
 } from "@/hooks/useVotingContract";
 import { formatVoteCount } from "@/lib/utils";
 import { ProposalState } from "@/lib/contracts";
+import { getChainMeta } from "@/lib/chains";
+import { useChainId } from "wagmi";
 
 export default function Home() {
+  const chainId = useChainId();
+  const chainMeta = getChainMeta(chainId);
   const { data: proposalCount } = useProposalCount();
   const { data: totalVoters } = useTotalRegisteredVoters();
   const { proposals } = useProposals(1n, 100n);
@@ -39,7 +43,7 @@ export default function Home() {
       <section className="min-h-[90vh] flex flex-col items-center justify-center px-6 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-white/10 bg-white/5 text-sm text-zinc-400 animate-fade-in">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          Now live on Sepolia Testnet
+          Live on {chainMeta.name}
         </div>
 
         <h1 className="text-6xl sm:text-8xl lg:text-[10rem] font-black tracking-tighter italic text-gradient leading-none">

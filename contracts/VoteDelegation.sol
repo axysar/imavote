@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -18,13 +18,13 @@ contract VoteDelegation is Ownable {
     // Storage                                                                //
     // -------------------------------------------------------------------- //
 
-    /// delegator → delegate
+    /// @notice delegator → delegate
     mapping(address => address) public delegations;
 
-    /// delegate → number of addresses currently delegating to them
+    /// @notice delegate → number of addresses currently delegating to them
     mapping(address => uint256) public delegatedWeight;
 
-    /// delegate → profile metadata URI (IPFS or HTTP)
+    /// @notice delegate → profile metadata URI (IPFS or HTTP)
     mapping(address => string) public delegateProfiles;
 
     // -------------------------------------------------------------------- //
@@ -42,6 +42,7 @@ contract VoteDelegation is Ownable {
     error CannotDelegateToSelf();
     error NoDelegationSet();
     error AlreadyDelegatedTo(address current);
+    error ZeroAddress();
 
     // -------------------------------------------------------------------- //
     // Constructor                                                            //
@@ -54,13 +55,13 @@ contract VoteDelegation is Ownable {
     // -------------------------------------------------------------------- //
 
     /// @notice Delegate your voting power to `_delegate`.
-    /// @param _delegate The address of the delegate.
+    /// @param _delegate The address of the delegate. Cannot be zero or self.
     function setDelegate(address _delegate) external {
+        if (_delegate == address(0)) revert ZeroAddress();
         if (_delegate == msg.sender) revert CannotDelegateToSelf();
         address current = delegations[msg.sender];
         if (current == _delegate) revert AlreadyDelegatedTo(_delegate);
 
-        // Remove weight from previous delegate if one exists.
         if (current != address(0)) {
             unchecked { delegatedWeight[current]--; }
         }
@@ -71,7 +72,7 @@ contract VoteDelegation is Ownable {
         emit DelegateSet(msg.sender, _delegate);
     }
 
-    /// @notice Remove your current delegation.
+    /// @notice Remove your current delegation and vote independently.
     function removeDelegate() external {
         address current = delegations[msg.sender];
         if (current == address(0)) revert NoDelegationSet();
@@ -83,11 +84,15 @@ contract VoteDelegation is Ownable {
     }
 
     /// @notice Query who `_delegator` has delegated to.
+    /// @param _delegator The address to look up.
+    /// @return The delegate address, or address(0) if none.
     function getDelegate(address _delegator) external view returns (address) {
         return delegations[_delegator];
     }
 
     /// @notice Query total delegated weight of `_delegate`.
+    /// @param _delegate The address to look up.
+    /// @return The number of addresses that have delegated to `_delegate`.
     function getWeight(address _delegate) external view returns (uint256) {
         return delegatedWeight[_delegate];
     }
@@ -104,6 +109,8 @@ contract VoteDelegation is Ownable {
     }
 
     /// @notice Read a delegate's profile URI.
+    /// @param _delegate The delegate address.
+    /// @return The profile URI string.
     function getProfile(address _delegate) external view returns (string memory) {
         return delegateProfiles[_delegate];
     }
