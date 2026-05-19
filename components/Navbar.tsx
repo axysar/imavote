@@ -7,6 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ConnectWallet } from "./ConnectWallet";
 import { ThemeToggle } from "./ThemeToggle";
+import { NetworkBadge } from "./NetworkBadge";
 
 const LINKS: { href: string; label: string }[] = [
   { href: "/dashboard", label: "Dashboard" },
@@ -60,6 +61,7 @@ export function Navbar() {
         </div>
 
         <div className="hidden sm:flex items-center gap-3">
+          <NetworkBadge />
           <ThemeToggle />
           <ConnectWallet />
         </div>
