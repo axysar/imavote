@@ -6,9 +6,12 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ConnectWallet } from "./ConnectWallet";
+import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS: { href: string; label: string }[] = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/delegate", label: "Delegate" },
+  { href: "/activity", label: "Activity" },
   { href: "/admin", label: "Admin" },
 ];
 
@@ -56,7 +59,8 @@ export function Navbar() {
           })}
         </div>
 
-        <div className="hidden sm:block">
+        <div className="hidden sm:flex items-center gap-3">
+          <ThemeToggle />
           <ConnectWallet />
         </div>
 

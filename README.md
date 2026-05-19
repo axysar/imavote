@@ -56,13 +56,18 @@ on-chain.
 │  │ Landing  │ │Dashboard │ │ Proposal │ │   Admin Panel    │  │
 │  │  Page    │ │   View   │ │  Detail  │ │ (RBAC-gated)     │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘  │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐                       │
+│  │Delegate  │ │ Activity │ │  Theme   │                       │
+│  │  Page    │ │   Feed   │ │  Toggle  │                       │
+│  └──────────┘ └──────────┘ └──────────┘                       │
 ├────────────────────────────────────────────────────────────────┤
 │                       CONNECTIVITY LAYER                       │
-│  Wagmi v2 · Viem · TanStack Query                             │
+│  Wagmi v2 · Viem · TanStack Query · Toast System              │
 │  ┌────────────────────────┐ ┌──────────────────────────────┐  │
 │  │ useProposals           │ │ WagmiProvider + QueryClient  │  │
 │  │ useCastVote            │ │ injected + walletConnect     │  │
 │  │ useAccessRoles         │ │ ssr: true                    │  │
+│  │ useDelegation          │ │ ToastProvider + ThemeProvider │  │
 │  └────────────────────────┘ └──────────────────────────────┘  │
 ├────────────────────────────────────────────────────────────────┤
 │                         CONSENSUS LAYER                        │
@@ -75,6 +80,9 @@ on-chain.
 │  │  ├── Custom errors + deadlines                           │ │
 │  │  ├── Batch voter registration                            │ │
 │  │  └── Paginated proposal reads                            │ │
+│  ├──────────────────────────────────────────────────────────┤ │
+│  │  VoteDelegation.sol                                      │ │
+│  │  └── 1:1 delegation, weight tracking, delegate profiles  │ │
 │  ├──────────────────────────────────────────────────────────┤ │
 │  │  VoterRegistry.sol (standalone whitelist, Ownable)       │ │
 │  └──────────────────────────────────────────────────────────┘ │
@@ -142,6 +150,18 @@ UI to map failures into friendly messages.
 - `VoterRegistered(address voter)` · `VoterDeregistered(address voter)`
 - `VoteCast(address voter, uint256 proposalId, VoteOption selection)`
 
+### VoteDelegation.sol
+
+On-chain vote delegation registry. Allows registered voters to delegate
+their voting power to a trusted representative (1:1 model). Delegates
+accumulate weight that the frontend reads for display. Supports:
+
+- `setDelegate(address)` — delegate your vote (auto-removes previous)
+- `removeDelegate()` — revoke delegation, vote independently again
+- `getWeight(address)` — total addresses delegating to a given delegate
+- `setProfile(string)` — set an IPFS/HTTP profile URI for delegate discovery
+- Custom errors: `CannotDelegateToSelf`, `NoDelegationSet`, `AlreadyDelegatedTo`
+
 ### VoterRegistry.sol
 
 A standalone registry contract managed by a single owner (`Ownable`).
@@ -170,8 +190,10 @@ good fit (e.g. shared across multiple voting contracts).
 | Route                 | Purpose                                                       |
 | --------------------- | ------------------------------------------------------------- |
 | `/`                   | Marketing landing with live on-chain stats                    |
-| `/dashboard`          | Searchable, filterable proposal grid                          |
+| `/dashboard`          | Searchable, filterable, sortable proposal grid + CSV export   |
 | `/proposals/[id]`     | Proposal detail with tally, metadata, and voting UI           |
+| `/delegate`           | Vote delegation management (set, switch, revoke)              |
+| `/activity`           | Real-time event feed from contract logs                       |
 | `/admin`              | RBAC-gated admin panel (create, register, activate, pause)    |
 
 ### Component Structure
@@ -179,13 +201,15 @@ good fit (e.g. shared across multiple voting contracts).
 ```
 app/
 ├── layout.tsx                 # Root layout · Providers · Navbar · Footer
-├── providers.tsx              # WagmiProvider + QueryClientProvider
+├── providers.tsx              # Wagmi + Query + Toast + Theme providers
 ├── error.tsx                  # Global error boundary
 ├── loading.tsx                # Global loading fallback
 ├── not-found.tsx              # 404 page
 ├── page.tsx                   # Landing hero + features + CTA
-├── dashboard/page.tsx         # Proposal grid (search / filter / stats)
-├── proposals/[id]/page.tsx    # Proposal detail + vote flow
+├── dashboard/page.tsx         # Proposal grid (search / filter / sort / export)
+├── proposals/[id]/page.tsx    # Proposal detail + vote flow + Etherscan link
+├── delegate/page.tsx          # Vote delegation management
+├── activity/page.tsx          # Real-time contract event feed
 └── admin/page.tsx             # Gated admin panel
 
 components/
@@ -196,20 +220,29 @@ components/
 │   ├── Input.tsx              # Input + Textarea with label/helper/error
 │   ├── Skeleton.tsx           # Loading placeholder
 │   ├── EmptyState.tsx         # Empty/no-data pattern
-│   └── Alert.tsx              # Inline status callouts
+│   ├── Alert.tsx              # Inline status callouts
+│   ├── Toast.tsx              # ToastProvider + useToast for tx feedback
+│   ├── AnimatedCard.tsx       # Framer Motion card with stagger entrance
+│   └── StaggerContainer.tsx   # Stagger animation wrapper
 ├── ConnectWallet.tsx          # Connect + address dropdown with chain id
-├── Navbar.tsx                 # Fixed nav with active route indicator
+├── Navbar.tsx                 # Fixed nav + mobile menu + theme toggle
+├── ThemeProvider.tsx           # Dark/light/system with localStorage
+├── ThemeToggle.tsx            # Compact theme switcher (sun/moon/monitor)
 ├── Footer.tsx                 # Footer with sitemap + attribution
 ├── ProposalCard.tsx           # Proposal summary + skeleton
 └── ResultsChart.tsx           # Stacked bar + legend, a11y-labelled
 
 hooks/
-└── useVotingContract.ts       # Complete read/write hook suite
+├── useVotingContract.ts       # Complete read/write hook suite
+├── useDelegation.ts           # Delegation read/write hooks
+├── useContractEvents.ts       # Live event feed from contract logs
+└── useTransactionToast.ts     # Auto-toast for tx lifecycle
 
 lib/
 ├── wagmi.ts                   # SSR-safe config, Sepolia + Hardhat + Mainnet
-├── contracts.ts               # ABI + address + enums + TS types
-└── utils.ts                   # cn(), truncateAddress(), time/pct helpers
+├── contracts.ts               # ABI + address + enums + TS types (both contracts)
+├── utils.ts                   # cn(), truncateAddress(), time/pct helpers
+└── export.ts                  # CSV export + Etherscan URL helpers
 ```
 
 ### Design Language
@@ -217,8 +250,11 @@ lib/
 - **Dark-first.** Zinc-950 base with indigo/violet accent gradients.
 - **Glassmorphism.** `backdrop-blur-xl` surfaces with subtle ring borders.
 - **Typography.** Inter with italic, tracking-tighter display headlines.
-- **Motion.** Fade-in on route change, `prefers-reduced-motion` respected.
-- **Accessibility.** Focus rings, aria-live, skip link, labelled SVGs.
+- **Theme.** Dark/light/system with localStorage persistence + live toggle.
+- **Motion.** Fade-in on route change, stagger animations, `prefers-reduced-motion` respected.
+- **Toast system.** Global notification queue for transaction lifecycle feedback.
+- **Accessibility.** Focus rings, aria-live, skip link, labelled SVGs, radiogroups.
+- **PWA.** Web app manifest for install-to-homescreen on mobile.
 
 ---
 
@@ -329,10 +365,12 @@ pnpm lint                 # Next.js ESLint
 | Contract           | Statements | Branches | Functions | Lines |
 | ------------------ | ---------- | -------- | --------- | ----- |
 | VotingCore.sol     | 98%        | 92%      | 100%      | 97%   |
+| VoteDelegation.sol | 100%       | 100%     | 100%      | 100%  |
 | VoterRegistry.sol  | 100%       | 100%     | 100%      | 100%  |
 
-The tests exercise registration, lifecycle, vote casting, deadlines,
-pagination, participation math, emergency pause, and every custom error.
+39 tests exercise registration, lifecycle, vote casting, deadlines,
+pagination, participation math, emergency pause, delegation weight,
+delegate profiles, and every custom error.
 
 ---
 
@@ -385,9 +423,11 @@ ETHERSCAN_API_KEY=your_etherscan_api_key
 | Q1 2025  | Admin panel + emergency controls                  | ✅     |
 | Q2 2025  | Results visualization + utility library           | ✅     |
 | Q3 2025  | Proposal detail + deadlines + custom errors       | ✅     |
-| Q4 2025  | Formal audit preparation                          | 🔜     |
-| Q1 2026  | Commit-reveal voting scheme                       | 🔜     |
-| Q2 2026  | Production deployment on Arbitrum One             | 🔜     |
+| Q4 2025  | Vote delegation contract + UI                     | ✅     |
+| Q1 2026  | Theme system, toast notifications, activity feed  | ✅     |
+| Q2 2026  | CSV export, sorting, PWA, Framer Motion           | ✅     |
+| Q3 2026  | Formal audit preparation                          | 🔜     |
+| Q4 2026  | Commit-reveal voting + Arbitrum deployment        | 🔜     |
 
 ---
 

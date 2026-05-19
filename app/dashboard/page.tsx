@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Inbox, Search, TrendingUp, Users, Vote, Activity } from "lucide-react";
+import { Download, Inbox, Search, TrendingUp, Users, Vote, Activity } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { proposalsToCSV, downloadCSV } from "@/lib/export";
 import { ProposalCard, ProposalCardSkeleton } from "@/components/ProposalCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -18,6 +20,7 @@ import { ProposalState } from "@/lib/contracts";
 import { formatVoteCount } from "@/lib/utils";
 
 type FilterKey = "all" | "active" | "pending" | "closed";
+type SortKey = "newest" | "oldest" | "most-votes" | "least-votes";
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -26,8 +29,16 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "closed", label: "Closed" },
 ];
 
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "newest", label: "Newest" },
+  { key: "oldest", label: "Oldest" },
+  { key: "most-votes", label: "Most Votes" },
+  { key: "least-votes", label: "Least Votes" },
+];
+
 export default function DashboardPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [sort, setSort] = useState<SortKey>("newest");
   const [query, setQuery] = useState("");
 
   const { proposals, isLoading, isError, refetch } = useProposals(1n, 100n);
@@ -37,7 +48,7 @@ export default function DashboardPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return proposals.filter((p) => {
+    const items = proposals.filter((p) => {
       if (filter === "active" && p.state !== ProposalState.Active) return false;
       if (filter === "pending" && p.state !== ProposalState.Pending) return false;
       if (filter === "closed" && p.state !== ProposalState.Closed) return false;
@@ -47,7 +58,21 @@ export default function DashboardPage() {
         p.description.toLowerCase().includes(q)
       );
     });
-  }, [proposals, filter, query]);
+
+    const totalVotesOf = (p: typeof proposals[0]) =>
+      Number(p.yesVotes + p.noVotes + p.abstainVotes);
+
+    switch (sort) {
+      case "oldest":
+        return items.slice().sort((a, b) => Number(a.id - b.id));
+      case "most-votes":
+        return items.slice().sort((a, b) => totalVotesOf(b) - totalVotesOf(a));
+      case "least-votes":
+        return items.slice().sort((a, b) => totalVotesOf(a) - totalVotesOf(b));
+      default:
+        return items; // already sorted newest-first from the hook
+    }
+  }, [proposals, filter, query, sort]);
 
   const stats = useMemo(() => {
     const activeCount = proposals.filter(
@@ -129,6 +154,20 @@ export default function DashboardPage() {
             aria-label="Search proposals"
           />
         </div>
+        {proposals.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const csv = proposalsToCSV(proposals);
+              downloadCSV(csv, `imavote-proposals-${Date.now()}.csv`);
+            }}
+            aria-label="Export proposals as CSV"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+        )}
         <div
           role="tablist"
           aria-label="Filter proposals by state"
@@ -150,6 +189,18 @@ export default function DashboardPage() {
             </button>
           ))}
         </div>
+        <select
+          aria-label="Sort proposals"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          className="px-3 py-2 text-sm font-medium rounded-xl bg-zinc-900/60 border border-white/5 text-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+        >
+          {SORT_OPTIONS.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Proposals Grid */}

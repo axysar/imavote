@@ -31,6 +31,22 @@ export function Footer() {
             </li>
             <li>
               <Link
+                href="/delegate"
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                Delegation
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/activity"
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                Activity Feed
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/admin"
                 className="text-zinc-400 hover:text-white transition-colors"
               >

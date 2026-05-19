@@ -246,3 +246,91 @@ export interface ProposalView {
   closedAt: bigint;
   deadline: bigint;
 }
+
+/* ========================================================================== */
+/*  VoteDelegation                                                            */
+/* ========================================================================== */
+
+export const DELEGATION_ABI = [
+  // Reads
+  {
+    inputs: [{ name: "_delegator", type: "address" }],
+    name: "getDelegate",
+    outputs: [{ type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_delegate", type: "address" }],
+    name: "getWeight",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_delegate", type: "address" }],
+    name: "getProfile",
+    outputs: [{ type: "string" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "", type: "address" }],
+    name: "delegations",
+    outputs: [{ type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "", type: "address" }],
+    name: "delegatedWeight",
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  // Writes
+  {
+    inputs: [{ name: "_delegate", type: "address" }],
+    name: "setDelegate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "removeDelegate",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "_profileURI", type: "string" }],
+    name: "setProfile",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  // Events
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "delegator", type: "address" },
+      { indexed: true, name: "delegate", type: "address" },
+    ],
+    name: "DelegateSet",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, name: "delegator", type: "address" },
+      { indexed: true, name: "previousDelegate", type: "address" },
+    ],
+    name: "DelegateRemoved",
+    type: "event",
+  },
+] as const;
+
+export const DELEGATION_ADDRESS: `0x${string}` =
+  (process.env.NEXT_PUBLIC_DELEGATION_ADDRESS as `0x${string}` | undefined) ??
+  "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";

@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  ExternalLink,
   MinusCircle,
   ShieldCheck,
   ThumbsDown,
@@ -37,7 +38,7 @@ import {
   useParticipationRate,
   useIsPaused,
 } from "@/hooks/useVotingContract";
-import { ProposalState, VoteOption } from "@/lib/contracts";
+import { ProposalState, VoteOption, VOTING_CORE_ADDRESS } from "@/lib/contracts";
 import {
   formatRelativeTime,
   formatTimestamp,
@@ -399,9 +400,20 @@ export default function ProposalDetailPage() {
                   invertOk={alreadyVoted ? "Already voted" : undefined}
                 />
               </ul>
-              <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Secured by VotingCore v2 · AccessControl + ReentrancyGuard
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Secured by VotingCore v2 · AccessControl + ReentrancyGuard
+                </div>
+                <a
+                  href={`https://sepolia.etherscan.io/address/${VOTING_CORE_ADDRESS}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Verify on Etherscan
+                </a>
               </div>
             </CardContent>
           </Card>

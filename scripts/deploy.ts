@@ -68,14 +68,24 @@ async function main() {
     console.log(" Seeded 2 proposals (#1 active) and 5 voters.");
   }
 
+  // Deploy VoteDelegation contract
+  console.log("--------------------------------------");
+  const DelegationFactory = await ethers.getContractFactory("VoteDelegation");
+  const delegation = await DelegationFactory.deploy();
+  await delegation.waitForDeployment();
+  const delegationAddr = await delegation.getAddress();
+  console.log(" VoteDelegation deployed at:", delegationAddr);
+
   // Persist deployment metadata so the frontend & scripts can read it.
   const deploymentsDir = join(__dirname, "..", "deployments");
   if (!existsSync(deploymentsDir)) mkdirSync(deploymentsDir, { recursive: true });
   const payload = {
-    contract: "VotingCore",
+    contracts: {
+      VotingCore: address,
+      VoteDelegation: delegationAddr,
+    },
     network: network.name,
     chainId: Number((await deployer.provider.getNetwork()).chainId),
-    address,
     deployer: deployer.address,
     timestamp: new Date().toISOString(),
   };

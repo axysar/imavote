@@ -35,6 +35,7 @@ export const metadata: Metadata = {
     description: "Decentralized voting for the modern age.",
   },
   robots: { index: true, follow: true },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
