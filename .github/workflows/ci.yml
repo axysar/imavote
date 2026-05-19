@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  TS_NODE_PROJECT: tsconfig.hardhat.json
+
+jobs:
+  lint-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx next lint
+      - run: npx tsc --noEmit
+
+  contracts:
+    name: Compile & Test Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx hardhat compile
+        env:
+          TS_NODE_PROJECT: tsconfig.hardhat.json
+      - run: npx hardhat test
+        env:
+          TS_NODE_PROJECT: tsconfig.hardhat.json
+      - name: Gas report
+        run: npx hardhat test
+        env:
+          REPORT_GAS: "true"
+          TS_NODE_PROJECT: tsconfig.hardhat.json
+
+  build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, contracts]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx next build
+      - name: Check bundle size
+        run: |
+          echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          du -sh .next/static/ >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
